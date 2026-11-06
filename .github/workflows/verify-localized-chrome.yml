@@ -3,9 +3,9 @@
 # existing-profile cases, with Chrome's UI language set per matrix row.
 name: "Verify: localized Chrome existing-profile setup"
 
+# The hosted lane script accepts only workflow_dispatch from a branch.
 on:
-  push:
-    branches: ["verify/**"]
+  workflow_dispatch:
 
 permissions:
   contents: read
