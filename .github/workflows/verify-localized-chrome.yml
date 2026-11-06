@@ -89,4 +89,4 @@ jobs:
           path: artifacts/cua-driver
           if-no-files-found: warn
           compression-level: 6
-          retention-days: 7
+          retention-days: 90
