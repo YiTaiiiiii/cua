@@ -15,7 +15,7 @@ LANE="${CUA_E2E_INTERNAL_LANE:-}"
 BOOTSTRAP_DIR="${REPO_ROOT}/artifacts/cua-driver/macos-hosted-bootstrap"
 BROWSER_ARTIFACT_DIR="${REPO_ROOT}/artifacts/cua-driver/macos-standalone-browser"
 # The browser lane certifies every installed product the Lume seed carries.
-STANDALONE_BROWSER_PRODUCTS="chrome,edge"
+STANDALONE_BROWSER_PRODUCTS="chrome"  # verify-localized-chrome: Chrome only
 # app path|code-signing identifier|vendor team, matching the driver's pid-free
 # isolated-launch attestation in platform-macos/src/browser/platform.rs.
 STANDALONE_BROWSER_APPS=(

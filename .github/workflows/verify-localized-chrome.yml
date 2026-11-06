@@ -1,0 +1,92 @@
+# Temporary verification for trycua/cua#3139. Not part of the fix PR.
+# Runs the hosted macOS browser lane, narrowed to Chrome and the two
+# existing-profile cases, with Chrome's UI language set per matrix row.
+name: "Verify: localized Chrome existing-profile setup"
+
+on:
+  push:
+    branches: ["verify/**"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-localized-chrome-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_NET_RETRY: "10"
+  CARGO_HTTP_TIMEOUT: "120"
+  CUA_TELEMETRY: "0"
+  DO_NOT_TRACK: "1"
+
+jobs:
+  browser:
+    name: "Chrome UI ${{ matrix.language }}"
+    runs-on: macos-26
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [zh-Hans, en]
+    env:
+      CUA_E2E_SOURCE_SHA: ${{ github.sha }}
+      CUA_E2E_WORKFLOW_SHA: ${{ github.sha }}
+      CUA_E2E_REBUILD: "false"
+      CUA_E2E_INTERNAL_LANE: browser
+      CUA_E2E_HARNESS_FILTER: ""
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Initialize build namespace
+        shell: bash
+        run: echo "CARGO_TARGET_DIR=${RUNNER_TEMP}/cua-driver-target-browser" >> "${GITHUB_ENV}"
+
+      - name: Install missing test dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=()
+          command -v ffmpeg >/dev/null 2>&1 || missing+=(ffmpeg)
+          command -v jq >/dev/null 2>&1 || missing+=(jq)
+          if ((${#missing[@]})); then brew install "${missing[@]}"; fi
+
+      - name: Set Chrome UI language
+        shell: bash
+        run: |
+          set -euo pipefail
+          defaults write com.google.Chrome AppleLanguages -array "${{ matrix.language }}"
+          defaults read com.google.Chrome AppleLanguages
+          defaults read "/Applications/Google Chrome.app/Contents/Info" CFBundleShortVersionString
+
+      - name: Run hosted macOS browser lane
+        shell: bash
+        run: scripts/ci/macos/run-hosted-rust-e2e.sh
+
+      - name: Summarize results
+        if: always()
+        shell: bash
+        run: |
+          dir=artifacts/cua-driver/macos-standalone-browser
+          echo "### Chrome UI ${{ matrix.language }} @ ${GITHUB_SHA::9}" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -f "$dir/summary.md" ]]; then cat "$dir/summary.md" >> "$GITHUB_STEP_SUMMARY"; fi
+          if [[ -f "$dir/results.jsonl" ]]; then
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            cat "$dir/results.jsonl" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          grep -rhoE "browser_[a-z_]+_refused[^\"]{0,160}" artifacts/cua-driver 2>/dev/null | sort | uniq -c | head -20 || true
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.2
+        with:
+          name: verify-localized-chrome-${{ matrix.language }}-${{ github.run_attempt }}
+          path: artifacts/cua-driver
+          if-no-files-found: warn
+          compression-level: 6
+          retention-days: 7

@@ -144,6 +144,8 @@ else
     tests+=(standalone_browser_native_omnibox_select_all)
   fi
 fi
+# verify-localized-chrome: only the existing-profile setup cases.
+tests=(standalone_browser_existing_profile_setup standalone_browser_existing_profile)
 # shellcheck source=lib/e2e-retry-once.sh
 source "${REPO_ROOT}/scripts/ci/lib/e2e-retry-once.sh"
 export CUA_E2E_PLATFORM=browsers
